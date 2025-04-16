@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Risk Adjusted Credit Pricing Dashboard</title>
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- MathJax for LaTeX rendering -->
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script
+    id="MathJax-script"
+    async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+  ></script>
+
+  <!-- Plotly JS for interactive charts -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+
+<!-- Fixed header panel -->
+<div class="fixed-header">
+  <div class="header-container">
+    <div class="header-item">
+      <!-- Simulate file input (does nothing) -->
+      <label for="file-upload" class="file-label">Upload CSV</label>
+      <input type="file" id="file-upload" name="file-upload" />
+    </div>
+
+    <div class="header-item">
+      <!-- Simulate model-choice dropdown -->
+      <label for="model-choice">Cost-Sensitive Model</label>
+      <select id="model-choice">
+        <option>Logistic Regression</option>
+        <option>XGBoost</option>
+        <option>LightGBM</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Title Panel -->
+<div class="title-panel">
+  <h2>Risk Adjusted Credit Pricing Dashboard</h2>
+</div>
+
+<!-- Main container (single tab) -->
+<div class="main-container">
+  <h3 class="tab-title">User Profit Margin</h3>
+
+  <!-- Explanation panel -->
+  <div class="well-custom explanation-panel">
+    <h3>Comprehensive Explanation of Our Risk-Based Pricing Steps</h3>
+    <p>
+      In this dashboard, we compute a 3% baseline present value (PV) for each loan, 
+      adjust it for default probabilities, and then find a ‘break-even’ rate that 
+      restores that 3%-based PV to a required level (plus margin). Below are the details:
+    </p>
+
+    <ol>
+      <li>
+        <strong>Zero Profit if Borrower's Rate = Bank Funding Rate (2%)</strong>
+        <p>
+          If the borrower is charged exactly 2% (the same as our discount/cost of funds),
+          the present value of payments will just equal the principal—meaning no profit.
+          That’s why we need a higher interest rate to earn a profit.
+        </p>
+      </li>
+      <li>
+        <strong>PV at 3% Annual Rate (Discounted at 2%)</strong>
+        <p>
+          Let’s say the loan amount is \$10,000 over 36 months. With a 3% nominal annual rate,
+          the monthly payment can be found via:
+        </p>
+        <p class="formula-block">
+          \[
+            \text{PMT}_{3\%} 
+            = \text{Loan} 
+            \times 
+            \frac{\bigl(0.03/12\bigr)\,\bigl(1 + 0.03/12\bigr)^{36}}
+                  {\bigl(1 + 0.03/12\bigr)^{36} - 1}.
+          \]
+        </p>
+        <p>
+          To find the present value of that monthly payment stream at a 2% discount rate, we apply:
+        </p>
+        <p class="formula-block">
+          \[
+            \text{PV} 
+            = \text{PMT}_{3\%}
+            \times
+            \frac{1 - \bigl(1 + 0.02/12\bigr)^{-36}}{0.02/12}.
+          \]
+        </p>
+        <p>
+          For example, this formula yields about \$10,151, which is higher than the principal
+          (because 3% &gt; 2%).
+        </p>
+      </li>
+      <li>
+        <strong>Default Probability and Loss Given Default (LGD)</strong>
+        <p>
+          We further reduce that 3% PV by the factor 
+          \((1 - PD \times LGD)\)
+          to reflect expected losses. If PD=5% and LGD=35%,
+          we multiply \$10,151 by \((1 - 0.05 \times 0.35) = 0.9825\),
+          giving an Expected PV (EPV) around \$9,973, which is now below \$10,151.
+        </p>
+      </li>
+      <li>
+        <strong>Break-even Rate Using the 3% PV as Baseline</strong>
+        <p>
+          To cover this shortfall, we scale that original 3% PV by 
+          \(\frac{1}{(1 - PD \times LGD)}\),
+          making our "required no-default PV" ~ \$10,335 in this example. Next, we must find
+          the monthly payment needed to achieve a present value of \$10,335 (still discounting at 2%). 
+          We compute:
+        </p>
+        <p class="formula-block">
+          \[
+            \text{PMT}_{\text{req}}
+            = \frac{10{,}335}{
+              \left[\dfrac{1 - (1+0.02/12)^{-36}}{0.02/12}\right]
+            }.
+          \]
+        </p>
+        <p>
+          Finally, we solve numerically for the borrower’s nominal annual rate that produces 
+          this required PMT under a standard amortization formula. That new rate might be
+          ~3.1 or 3.2% (break-even), and then we add a user-defined margin. 
+          If margin = 1%, the final rate may be ~4.1 or 4.2%.
+        </p>
+        <p>
+          Summarizing: we start from a 3% scenario to get a baseline PV, reduce it for default risk,
+          then solve for a higher rate that brings us back to that 3%-based PV (scaled by default losses),
+          and finally add the margin.
+        </p>
+      </li>
+    </ol>
+  </div>
+
+  <!-- Sidebar + Main content layout -->
+  <div class="layout-container">
+    <!-- Sidebar -->
+    <div class="sidebar-panel">
+      <h4>User Margin Settings</h4>
+      <label for="bank-profit-margin">Bank Profit Margin (%)</label><br />
+      <input type="number" id="bank-profit-margin" value="1" step="0.5" /><br /><br />
+
+      <label for="lgd-user">Loss given default (%)</label><br />
+      <input type="number" id="lgd-user" value="35" step="1" /><br /><br />
+
+      <label for="cutoff-user">Cut-off probability (%)</label><br />
+      <input type="number" id="cutoff-user" value="20" step="0.01" /><br /><br />
+
+      <label for="table-filter-choice">Filter Table:</label><br />
+      <select id="table-filter-choice">
+        <option>Show Only Accepted Loans</option>
+        <option>Show All Loans</option>
+      </select>
+    </div>
+
+    <!-- Main content -->
+    <div class="content-panel">
+      
+      <!-- Data table area -->
+      <div class="well-custom">
+        <h3>Adjusted Rates with User Margin</h3>
+
+        <!-- Dummy table to represent 5 rows -->
+        <table id="user-margin-table">
+          <thead>
+            <tr>
+              <th>loan_id</th>
+              <th>p_default</th>
+              <th>loan_amount</th>
+              <th>term</th>
+              <th>present_value_3pct</th>
+              <th>break_even_rate</th>
+              <th>adjusted_rate</th>
+              <th>monthly_installment</th>
+              <th>accepted_user</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>0.04</td>
+              <td>10000</td>
+              <td>36</td>
+              <td>10150</td>
+              <td>3.20</td>
+              <td>4.20</td>
+              <td>295</td>
+              <td>TRUE</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>0.25</td>
+              <td>12000</td>
+              <td>60</td>
+              <td>12175</td>
+              <td>3.50</td>
+              <td>4.50</td>
+              <td>223</td>
+              <td>FALSE</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>0.15</td>
+              <td>8000</td>
+              <td>36</td>
+              <td>8120</td>
+              <td>3.30</td>
+              <td>4.30</td>
+              <td>236</td>
+              <td>TRUE</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>0.18</td>
+              <td>7000</td>
+              <td>36</td>
+              <td>7100</td>
+              <td>3.25</td>
+              <td>4.25</td>
+              <td>207</td>
+              <td>TRUE</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>0.05</td>
+              <td>5000</td>
+              <td>60</td>
+              <td>5070</td>
+              <td>3.10</td>
+              <td>4.10</td>
+              <td>92</td>
+              <td>TRUE</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Fake 'download' button -->
+        <button id="download-tab2">Download as XLSX</button>
+      </div>
+
+      <!-- Acceptance vs Rejection (chart) -->
+      <div class="well-custom">
+        <h3>Acceptance vs Rejection (Cut-off Visualization)</h3>
+        <div id="plot-probs" class="plot-placeholder">
+          <!-- Plotly chart will be rendered here by script.js -->
+        </div>
+        <br />
+        <div id="explain-1">
+          There are 5 loans in total. 4 accepted and 1 rejected, based on the cut-off of 20%.
+        </div>
+        <div id="explain-2"></div>
+        <div id="explain-3"></div>
+        <br />
+        <!-- Dashboard stats placeholders -->
+        <div id="dashboard-stats">
+          <div class="dashboard-box">
+            <h4>Avg. Adjusted Rate</h4>
+            <h3>4.25%</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Avg. Loan Amount</h4>
+            <h3>$8,400.00</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Avg. Probability of Default</h4>
+            <h3>12%</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Total Loan Amount</h4>
+            <h3>$42,000.00</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Total to be Paid</h4>
+            <h3>$45,890.00</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Total Interest</h4>
+            <h3>$3,890.00</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Avg. Expected Profit</h4>
+            <h3>$120.00</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Total Expected Profit</h4>
+            <h3>$600.00</h3>
+          </div>
+          <div class="dashboard-box">
+            <h4>Avg. Monthly Installment</h4>
+            <h3>$210.00</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Default Probability vs. Break-even Rate (chart) -->
+      <div class="well-custom">
+        <h3>Default Probability vs. Break-even Rate</h3>
+        <p>
+          Below is an interactive scatter plot showing default probability on the x-axis,
+          and the corresponding break-even rate (before adding margin) on the y-axis. 
+          Points are colored by term. Hover over any point to see exact values.
+        </p>
+        <div id="plot-break-even-scatter" class="plot-placeholder">
+          <!-- Another Plotly chart placeholder -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- External JS for minor interactivity and Plotly chart creation -->
+<script src="script.js"></script>
+
+</body>
+</html>

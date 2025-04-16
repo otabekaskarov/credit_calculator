@@ -1,0 +1,159 @@
+/* Basic reset & body styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  background-color: #fafafa;
+  padding-top: 180px; /* so content doesn't hide under fixed header */
+  color: #333;
+}
+
+/* Fixed header styles */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
+  background-color: #f4f4f4;
+  border-bottom: 1px solid #ccc;
+  padding: 10px;
+}
+
+.header-container {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 25px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.file-label {
+  margin-bottom: 5px;
+}
+
+/* Title panel */
+.title-panel {
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 20px;
+}
+
+/* Main container & tab title */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.tab-title {
+  color: #2c3e50;
+  margin: 20px 0 10px 0;
+  font-size: 1.3em;
+}
+
+/* Explanation panel (like .well-custom in Shiny) */
+.well-custom {
+  background-color: #fdfdfd;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.explanation-panel p,
+.explanation-panel li {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.formula-block {
+  text-align: center;
+  margin: 12px 0;
+}
+
+/* Two-column layout: sidebar + content */
+.layout-container {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+/* Sidebar panel */
+.sidebar-panel {
+  flex: 0 0 250px;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* Content panel */
+.content-panel {
+  flex: 1;
+}
+
+/* Table for user margin data */
+#user-margin-table {
+  width: 80%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+#user-margin-table thead tr {
+  background-color: #f0f0f0;
+}
+
+#user-margin-table th,
+#user-margin-table td {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+#download-tab2 {
+  margin-top: 15px;
+  padding: 5px 10px;
+  font-size: 90%;
+}
+
+/* Chart placeholders for Plotly */
+.plot-placeholder {
+  width: 80%;
+  min-height: 300px;
+  margin: 0 auto;
+}
+
+/* Dashboard stats */
+#dashboard-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dashboard-box {
+  background-color: #f7f7f7;
+  padding: 15px;
+  margin: 5px;
+  border-radius: 5px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex: 1 0 200px;
+}
+
+.dashboard-box h4 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
